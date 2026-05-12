@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Block Blast Chromebook</title>
+
+<style>
+body{
+    margin:0;
+    background:#111827;
+    font-family:Arial;
+    color:white;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    height:100vh;
+}
+
+.game{
+    display:flex;
+    gap:20px;
+}
+
+canvas{
+    background:#1f2937;
+    border-radius:10px;
+}
+
+.sidebar{
+    width:220px;
+}
+
+.score{
+    font-size:28px;
+    margin-bottom:20px;
+}
+
+.pieces{
+    display:flex;
+    flex-direction:column;
+    gap:15px;
+}
+
+.piece{
+    background:#374151;
+    padding:10px;
+    border-radius:10px;
+    cursor:pointer;
+}
+
+.cell{
+    width:20px;
+    height:20px;
+    display:inline-block;
+    margin:1px;
+    border-radius:4px;
+}
+
+.fill{
+    background:#60a5fa;
+}
+</style>
+</head>
+
+<body>
+
+<div class="game">
+
+<canvas id="board" width="400" height="400"></canvas>
+
+<div class="sidebar">
+<h1>Block Blast</h1>
+
+<div class="score">
+Score: <span id="score">0</span>
+</div>
+
+<p>Click a piece, then click the board.</p>
+
+<div class="pieces" id="pieces"></div>
+</div>
+
+</div>
+
+<script>
+
+const canvas = document.getElementById("board");
+const ctx = canvas.getContext("2d");
+
+const SIZE = 10;
+const CELL = 40;
+
+let score = 0;
+
+const board = Array.from({length:SIZE},()=>Array(SIZE).fill(0));
+
+const SHAPES = [
+[[1]],
+
+[[1,1]],
+
+[[1],[1]],
+
+[[1,1],[1,1]],
+
+[[1,1,1]],
+
+[[1],[1],[1]],
+
+[[1,0],[1,1]],
+
+[[0,1],[1,1]],
+
+[[1,1,1],[0,1,0]]
+];
+
+let selectedPiece = null;
+let currentPieces = [];
+
+function drawBoard(){
+
+ctx.clearRect(0,0,400,400);
+
+for(let y=0;y<SIZE;y++){
+
+    for(let x=0;x<SIZE;x++){
+
+        ctx.fillStyle = board[y][x]
+        ? "#60a5fa"
+        : "#374151";
+
+        ctx.fillRect(
+            x*CELL,
+            y*CELL,
+            CELL-2,
+            CELL-2
+        );
+    }
+}
+}
+
+function generatePieces(){
+
+const holder = document.getElementById("pieces");
+holder.innerHTML = "";
+
+currentPieces = [];
+
+for(let i=0;i<3;i++){
+
+    const shape =
+    SHAPES[Math.floor(Math.random()*SHAPES.length)];
+
+    currentPieces.push(shape);
+
+    const div = document.createElement("div");
+    div.className = "piece";
+
+    div.onclick = ()=>{
+
+        selectedPiece = i;
+
+        document.querySelectorAll(".piece")
+        .forEach(p=>p.style.outline="none");
+
+        div.style.outline="3px solid yellow";
+    };
+
+    shape.forEach(row=>{
+
+        const rowDiv = document.createElement("div");
+
+        row.forEach(cell=>{
+
+            const c = document.createElement("div");
+            c.className = "cell";
+
+            if(cell) c.classList.add("fill");
+
+            rowDiv.appendChild(c);
+        });
+
+        div.appendChild(rowDiv);
+    });
+
+    holder.appendChild(div);
+}
+}
+
+function canPlace(shape,gx,gy){
+
+for(let y=0;y<shape.length;y++){
+
+    for(let x=0;x<shape[y].length;x++){
+
+        if(shape[y][x]){
+
+            const nx = gx+x;
+            const ny = gy+y;
+
+            if(
+                nx<0 ||
+                ny<0 ||
+                nx>=SIZE ||
+                ny>=SIZE ||
+                board[ny][nx]
+            ){
+                return false;
+            }
+        }
+    }
+}
+
+return true;
+}
+
+function place(shape,gx,gy){
+
+for(let y=0;y<shape.length;y++){
+
+    for(let x=0;x<shape[y].length;x++){
+
+        if(shape[y][x]){
+
+            board[gy+y][gx+x]=1;
+        }
+    }
+}
+
+clearLines();
+
+drawBoard();
+}
+
+function clearLines(){
+
+let cleared = 0;
+
+for(let y=0;y<SIZE;y++){
+
+    if(board[y].every(v=>v===1)){
+
+        board[y].fill(0);
+        cleared++;
+    }
+}
+
+for(let x=0;x<SIZE;x++){
+
+    let full = true;
+
+    for(let y=0;y<SIZE;y++){
+
+        if(board[y][x]===0){
+            full = false;
+        }
+    }
+
+    if(full){
+
+        for(let y=0;y<SIZE;y++){
+
+            board[y][x]=0;
+        }
+
+        cleared++;
+    }
+}
+
+if(cleared){
+
+    score += cleared*100;
+
+    document.getElementById("score").textContent = score;
+}
+}
+
+canvas.addEventListener("click",(e)=>{
+
+if(selectedPiece===null) return;
+
+const rect = canvas.getBoundingClientRect();
+
+const x = Math.floor((e.clientX-rect.left)/CELL);
+const y = Math.floor((e.clientY-rect.top)/CELL);
+
+const shape = currentPieces[selectedPiece];
+
+if(canPlace(shape,x,y)){
+
+    place(shape,x,y);
+
+    currentPieces[selectedPiece]=null;
+
+    generatePieces();
+
+    selectedPiece=null;
+}
+});
+
+generatePieces();
+drawBoard();
+
+</script>
+
+</body>
+</html>
